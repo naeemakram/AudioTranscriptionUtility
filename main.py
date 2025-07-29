@@ -3,9 +3,36 @@ from openai import OpenAI
 import sys
 
 
-def format_transcript(text):
+def format_transcript_with_ai(text, client):
     """
-    Format the transcript with proper punctuation and line breaks
+    Use OpenAI to format the transcript with proper punctuation and structure
+    """
+    try:
+        prompt = f"""Please format the following transcribed text with proper punctuation, capitalization, and paragraph breaks. Make it readable and well-structured:
+
+{text}
+
+Return only the formatted text without any additional commentary."""
+
+        response = client.chat.completions.create(
+            model="gpt-3.5-turbo",
+            messages=[
+                {"role": "system", "content": "You are a professional text editor. Format transcribed text with proper punctuation, capitalization, and paragraph breaks."},
+                {"role": "user", "content": prompt}
+            ],
+            max_tokens=2000,
+            temperature=0.1
+        )
+
+        return response.choices[0].message.content.strip()
+
+    except Exception as e:
+        print(f"⚠️ Warning: AI formatting failed ({str(e)}). Using basic formatting instead.")
+        return format_transcript_basic(text)
+
+def format_transcript_basic(text):
+    """
+    Basic formatting as fallback if AI formatting fails
     """
     import re
 
@@ -24,9 +51,9 @@ def format_transcript(text):
     sentences = re.split(r'([.!?])\s*', text)
     formatted_lines = []
 
-    for i in range(0, len(sentences) - 1, 2):
-        if i + 1 < len(sentences):
-            sentence = sentences[i] + sentences[i + 1]
+    for i in range(0, len(sentences)-1, 2):
+        if i+1 < len(sentences):
+            sentence = sentences[i] + sentences[i+1]
             if sentence.strip():
                 formatted_lines.append(sentence.strip())
 
@@ -48,10 +75,13 @@ def transcribe_audio(file_path, api_key):
                 file=audio_file,
                 response_format="text",
                 language="en",
+                task="transcribe"
             )
 
-        # Format the transcript with proper punctuation and line breaks
-        formatted_transcript = format_transcript(transcript)
+        print("🤖 Formatting text with AI...")
+
+        # Format the transcript using OpenAI's text completion
+        formatted_transcript = format_transcript_with_ai(transcript, client)
         return formatted_transcript
 
     except FileNotFoundError:
