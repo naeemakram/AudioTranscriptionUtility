@@ -16,7 +16,9 @@ def transcribe_audio(file_path, api_key):
             transcript = client.audio.transcriptions.create(
                 model="whisper-1",
                 file=audio_file,
-                response_format="text"
+                response_format="text",
+                language="en",
+                task="transcribe"
             )
         
         return transcript
