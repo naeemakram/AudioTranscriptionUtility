@@ -1,8 +1,8 @@
 [project]
-name = "python-template"
+name = "Audio Transcription"
 version = "0.1.0"
 description = ""
-authors = ["Your Name <you@example.com>"]
+authors = ["Naeem Malik <naeem.akram.malik@gmail.com>"]
 requires-python = ">=3.11"
 dependencies = [
     "openai>=1.97.1",
