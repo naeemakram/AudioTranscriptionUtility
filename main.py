@@ -16,19 +16,26 @@ Return only the formatted text without any additional commentary."""
 
         response = client.chat.completions.create(
             model="gpt-3.5-turbo",
-            messages=[
-                {"role": "system", "content": "You are a professional text editor. Format transcribed text with proper punctuation, capitalization, and paragraph breaks."},
-                {"role": "user", "content": prompt}
-            ],
+            messages=[{
+                "role":
+                "system",
+                "content":
+                "You are a professional text editor. Format transcribed text with proper punctuation, capitalization, and paragraph breaks."
+            }, {
+                "role": "user",
+                "content": prompt
+            }],
             max_tokens=2000,
-            temperature=0.1
-        )
+            temperature=0.1)
 
         return response.choices[0].message.content.strip()
 
     except Exception as e:
-        print(f"⚠️ Warning: AI formatting failed ({str(e)}). Using basic formatting instead.")
+        print(
+            f"⚠️ Warning: AI formatting failed ({str(e)}). Using basic formatting instead."
+        )
         return format_transcript_basic(text)
+
 
 def format_transcript_basic(text):
     """
@@ -51,9 +58,9 @@ def format_transcript_basic(text):
     sentences = re.split(r'([.!?])\s*', text)
     formatted_lines = []
 
-    for i in range(0, len(sentences)-1, 2):
-        if i+1 < len(sentences):
-            sentence = sentences[i] + sentences[i+1]
+    for i in range(0, len(sentences) - 1, 2):
+        if i + 1 < len(sentences):
+            sentence = sentences[i] + sentences[i + 1]
             if sentence.strip():
                 formatted_lines.append(sentence.strip())
 
@@ -74,12 +81,13 @@ def transcribe_audio(file_path, api_key):
                 model="whisper-1",
                 file=audio_file,
                 response_format="text",
-                language="en",
-                task="transcribe"
-            )
+                language="en")
 
         print("🤖 Formatting text with AI...")
 
+        if not transcript:
+            print("⚠️ Warning: Transcript is empty. Skipping formatting.")
+            return ""
         # Format the transcript using OpenAI's text completion
         formatted_transcript = format_transcript_with_ai(transcript, client)
         return formatted_transcript
