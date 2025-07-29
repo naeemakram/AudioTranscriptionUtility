@@ -3,6 +3,35 @@ import os
 from openai import OpenAI
 import sys
 
+def format_transcript(text):
+    """
+    Format the transcript with proper punctuation and line breaks
+    """
+    import re
+    
+    # Remove extra whitespace
+    text = re.sub(r'\s+', ' ', text.strip())
+    
+    # Add periods at the end of sentences if missing
+    # Look for sentence endings without punctuation
+    text = re.sub(r'([a-zA-Z0-9])\s+([A-Z])', r'\1. \2', text)
+    
+    # Ensure the text ends with a period
+    if text and not text.endswith(('.', '!', '?')):
+        text += '.'
+    
+    # Split into sentences and put each on a new line
+    sentences = re.split(r'([.!?])\s*', text)
+    formatted_lines = []
+    
+    for i in range(0, len(sentences)-1, 2):
+        if i+1 < len(sentences):
+            sentence = sentences[i] + sentences[i+1]
+            if sentence.strip():
+                formatted_lines.append(sentence.strip())
+    
+    return '\n'.join(formatted_lines)
+
 def transcribe_audio(file_path, api_key):
     """
     Transcribe audio file using OpenAI Whisper API
@@ -21,7 +50,9 @@ def transcribe_audio(file_path, api_key):
                 task="transcribe"
             )
         
-        return transcript
+        # Format the transcript with proper punctuation and line breaks
+        formatted_transcript = format_transcript(transcript)
+        return formatted_transcript
     
     except FileNotFoundError:
         return f"Error: Audio file '{file_path}' not found."
