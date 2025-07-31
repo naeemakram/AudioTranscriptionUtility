@@ -17,6 +17,7 @@ readme = "README.md"
 
 [tool.poetry.dependencies]
 python = "^3.11"
+openai = "^1.98.0"
 
 [build-system]
 requires = ["poetry-core"]
