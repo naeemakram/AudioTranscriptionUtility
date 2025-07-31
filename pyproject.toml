@@ -7,3 +7,17 @@ requires-python = ">=3.11"
 dependencies = [
     "openai>=1.97.1",
 ]
+
+[tool.poetry]
+name = "audio transcription utility"
+version = "0.1.0"
+description = "Audio transcription utility for personal use."
+authors = ["Naeem Akram <naeem.akram.malik@gmail.com>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.11"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
