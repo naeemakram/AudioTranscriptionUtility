@@ -110,7 +110,7 @@ def main():
     print("=" * 45)
 
     # Get API key from environment variable
-    api_key = os.getenv('OPENAI_API_KEY')
+    api_key = "OPENAI_API_KEY_REDACTED"  #os.getenv('OPENAI_API_KEY')
 
     if not api_key:
         print("❌ Error: OPENAI_API_KEY environment variable not set.")
