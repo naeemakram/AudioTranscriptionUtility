@@ -123,11 +123,15 @@ def main():
         print("Usage: python main.py <audio_file_path>")
         print("Example: python main.py audio.mp3")
         return
+    # require a file path CLI argument, trim it, and validate
+    if len(sys.argv) < 2:
+        print("✖ Error: Missing required file path argument.")
+        return
 
     file_path = sys.argv[1].strip()
 
     if not file_path:
-        print("❌ Error: File path cannot be empty.")
+        print("✖ Error: File path cannot be empty.")
         return
 
     # Check if file exists
