@@ -17,10 +17,8 @@ Return only the formatted text without any additional commentary."""
         response = client.chat.completions.create(
             model="gpt-5",
             messages=[{
-                "role":
-                "system",
-                "content":
-                "You are a professional text editor. Format transcribed text with proper punctuation, capitalization, paragraph breaks, and paragraph headings."
+                "role": "system",
+                "content": "You are a professional text editor. Format transcribed text with proper punctuation, capitalization, paragraph breaks, and paragraph headings."
             }, {
                 "role": "user",
                 "content": prompt
@@ -30,19 +28,13 @@ Return only the formatted text without any additional commentary."""
         return response.choices[0].message.content.strip()
 
     except Exception as e:
-        print(
-            f"⚠️ Warning: AI formatting failed ({str(e)}). Using basic formatting instead."
-        )
+        print(f"⚠️ Warning: AI formatting failed ({str(e)}). Using basic formatting instead.")
         return text
 
 
 def format_text_to_json(text, api_key):
     """
     Convert formatted text to JSON using OpenAI's completion API.
-
-    :param text: The input text to be converted to JSON.
-    :param client: The OpenAI client instance to call the model.
-    :return: JSON object of the formatted text.
     """
     try:
         client = OpenAI(api_key=api_key)
@@ -52,10 +44,8 @@ def format_text_to_json(text, api_key):
         response = client.chat.completions.create(
             model="gpt-3.5-turbo",
             messages=[{
-                "role":
-                "system",
-                "content":
-                "You are a helpful assistant that formats text into JSON."
+                "role": "system",
+                "content": "You are a helpful assistant that formats text into JSON."
             }, {
                 "role": "user",
                 "content": prompt
@@ -63,14 +53,11 @@ def format_text_to_json(text, api_key):
             max_tokens=2500,
             temperature=0.2)
 
-        # Extract and parse the JSON content from the response
         formatted_json = response.choices[0].message.content.strip()
         return formatted_json
 
     except Exception as e:
-        print(
-            f"⚠️ Warning: Conversion to JSON failed ({str(e)}). Returning None."
-        )
+        print(f"⚠️ Warning: Conversion to JSON failed ({str(e)}). Returning None.")
         return None
 
 
@@ -79,10 +66,8 @@ def transcribe_audio(file_path, api_key):
     Transcribe audio file using OpenAI Whisper API
     """
     try:
-        # Initialize OpenAI client
         client = OpenAI(api_key=api_key)
 
-        # Open and transcribe the audio file
         with open(file_path, "rb") as audio_file:
             transcript = client.audio.transcriptions.create(
                 model="whisper-1",
@@ -95,7 +80,7 @@ def transcribe_audio(file_path, api_key):
         if not transcript:
             print("⚠️ Warning: Transcript is empty. Skipping formatting.")
             return ""
-        # Format the transcript using OpenAI's text completion
+
         formatted_transcript = format_transcript_with_ai(transcript, client)
         return formatted_transcript
 
@@ -109,27 +94,22 @@ def main():
     print("🎵 OpenAI Whisper Audio Transcription Tool")
     print("=" * 45)
 
-    # Get API key from environment variable
-    api_key = "OPENAI_API_KEY_REDACTED"  #os.getenv('OPENAI_API_KEY')
+    # Get API key (hardcoded)
+    api_key = "OPENAI_API_KEY_REDACTED"
 
     if not api_key:
         print("❌ Error: OPENAI_API_KEY environment variable not set.")
         print("Please set your OpenAI API key in the Secrets tool.")
         return
 
-    # Get audio file path from command line argument
+    # require a file path CLI argument, trim it, and validate
     if len(sys.argv) < 2:
         print("❌ Error: No file path provided.")
         print("Usage: python main.py <audio_file_path>")
         print("Example: python main.py audio.mp3")
         return
-    # require a file path CLI argument, trim it, and validate
-    if len(sys.argv) < 2:
-        print("✖ Error: Missing required file path argument.")
-        return
 
     file_path = sys.argv[1].strip()
-
     if not file_path:
         print("✖ Error: File path cannot be empty.")
         return
@@ -150,13 +130,11 @@ def main():
         print("📝 TRANSCRIPTION RESULT:")
         print("=" * 45)
         print(result)
-
         return
 
     print(f"🔄 Transcribing audio file: {file_path}")
     print("Please wait...")
 
-    # Transcribe the audio
     result = transcribe_audio(file_path, api_key)
 
     print("\n" + "=" * 45)
@@ -166,9 +144,7 @@ def main():
     print("=" * 45)
 
     if (result.startswith("Error: during transcription: Error code:")):
-        print(
-            "❌ Error: Transcription failed. Please check your API key and file format."
-        )
+        print("❌ Error: Transcription failed. Please check your API key and file format.")
         return
 
     output_file = f"{os.path.splitext(file_path)[0]}_transcription.txt"

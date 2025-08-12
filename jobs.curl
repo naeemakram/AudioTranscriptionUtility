@@ -1,0 +1,16 @@
+curl 'https://ats.rippling.com/api/v2/board/netwrix-corporation/jobs?city=&country=&groupJobsByLocation=false&page=1&pageSize=20&searchQuery=&state=&workplaceType' \
+-H 'accept: application/json, text/plain, */*' \
+-H 'accept-language: en-GB,en-US;q=0.9,en;q=0.8,fa;q=0.7' \
+-H 'baggage: sentry-environment=production,sentry-release=5mxYDF3SaSSGzxzkKkpg1,sentry-public_key=908ccf35bffc4247823e66133cba73de,sentry-trace_id=7a779637656f42118685c688c52f83a0,sentry-sample_rate=1,sentry-transaction=%2F%5BjobBoardSlug%5D%2Fjobs,sentry-sampled=true' \
+-b 'NEXT_LOCALE=en-GB; cf_clearance=MIgu9YOXoozyqEx_gAowehtRHm4Wu36LZXTH8JeaF9k-1754731193-1.2.1.1-TUpm0m1oXoueEdKe8mu3KrWHC2JBPstL4rJ_jFTeLveNn5Lp5Mo9wA0.W9H6BLhxIG9kwQ24RO5p5yUnUMl8kSy1KMUbh7Yb6ULrD2eMlsGHGiILDJtuFBPUqfUdYveRkWpYOX6VYmzXPNFvl8HQdeLXb4qcL1PhIgXn.PH1Spz.wPOFadpZpneNNVICmbYvtPkOspveCcTBzfR8Dj4M3B6PqgYMr5f8P3S5sm5zKUQ; _dd_s=aid=f0b05cc2-5738-48ab-9c24-6de731961f4e&rum=1&id=8157e527-7068-4da4-8ed8-12a1e738330d&created=1754730499045&expire=1754733045830' \
+-H 'priority: u=1, i' \
+-H 'referer: https://ats.rippling.com/en-GB/netwrix-corporation/jobs?page=1' \
+-H 'sec-ch-ua: "Not;A=Brand";v="99", "Google Chrome";v="139", "Chromium";v="139"' \
+-H 'sec-ch-ua-mobile: ?0' \
+-H 'sec-ch-ua-platform: "Windows"' \
+-H 'sec-fetch-dest: empty' \
+-H 'sec-fetch-mode: cors' \
+-H 'sec-fetch-site: same-origin' \
+-H 'sentry-trace: b9e7d0449d5f42059f0bdaf8e9ce100e-bbd081160519c34a-1' \
+-H 'user-agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36' \
+-H 'x-ats-language: en-GB'
