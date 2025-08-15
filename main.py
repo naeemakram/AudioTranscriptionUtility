@@ -93,9 +93,7 @@ def transcribe_audio(file_path, api_key):
 def main():
     print("🎵 OpenAI Whisper Audio Transcription Tool")
     print("=" * 45)
-
-    # Get API key (hardcoded)
-    api_key = "OPENAI_API_KEY_REDACTED"
+    api_key = os.getenv('OPENAI_API_KEY')
 
     if not api_key:
         print("❌ Error: OPENAI_API_KEY environment variable not set.")
