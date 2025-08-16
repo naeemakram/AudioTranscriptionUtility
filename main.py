@@ -8,17 +8,19 @@ def format_transcript_with_ai(text, client):
     Use OpenAI to format the transcript with proper punctuation and structure
     """
     try:
-        prompt = f"""Please format the following transcribed text with proper punctuation, capitalization, and paragraph breaks. Make it readable and well-structured.:
+        prompt = f"""You are an expert in making text data look readable by only changing it's formatting and punctionation without adding any new content. Keep only the human readable part. Please format the following transcribed text with proper punctuation, capitalization, and paragraph breaks. Make it readable and well-structured. Add pargraph headings with starting timestamps. Keep timestamps only for paragraph headings, keep paragraph body clean text. <text>
 
 {text}
-
+</text>
 Return only the formatted text without any additional commentary."""
-
+        print("🤖 Formatting text with AI...")
         response = client.chat.completions.create(
             model="gpt-5",
             messages=[{
-                "role": "system",
-                "content": "You are a professional text editor. Format transcribed text with proper punctuation, capitalization, paragraph breaks, and paragraph headings."
+                "role":
+                "system",
+                "content":
+                "You are a professional text editor. Format transcribed text with proper punctuation, capitalization, paragraph breaks, and paragraph headings."
             }, {
                 "role": "user",
                 "content": prompt
@@ -28,7 +30,9 @@ Return only the formatted text without any additional commentary."""
         return response.choices[0].message.content.strip()
 
     except Exception as e:
-        print(f"⚠️ Warning: AI formatting failed ({str(e)}). Using basic formatting instead.")
+        print(
+            f"⚠️ Warning: AI formatting failed ({str(e)}). Using basic formatting instead."
+        )
         return text
 
 
@@ -44,8 +48,10 @@ def format_text_to_json(text, api_key):
         response = client.chat.completions.create(
             model="gpt-3.5-turbo",
             messages=[{
-                "role": "system",
-                "content": "You are a helpful assistant that formats text into JSON."
+                "role":
+                "system",
+                "content":
+                "You are a helpful assistant that formats text into JSON."
             }, {
                 "role": "user",
                 "content": prompt
@@ -57,7 +63,9 @@ def format_text_to_json(text, api_key):
         return formatted_json
 
     except Exception as e:
-        print(f"⚠️ Warning: Conversion to JSON failed ({str(e)}). Returning None.")
+        print(
+            f"⚠️ Warning: Conversion to JSON failed ({str(e)}). Returning None."
+        )
         return None
 
 
@@ -72,7 +80,8 @@ def transcribe_audio(file_path, api_key):
             transcript = client.audio.transcriptions.create(
                 model="whisper-1",
                 file=audio_file,
-                response_format="text",
+                response_format="verbose_json",
+                timestamp_granularities=["segment"],
                 language="en")
 
         print("🤖 Formatting text with AI...")
@@ -142,7 +151,9 @@ def main():
     print("=" * 45)
 
     if (result.startswith("Error: during transcription: Error code:")):
-        print("❌ Error: Transcription failed. Please check your API key and file format.")
+        print(
+            "❌ Error: Transcription failed. Please check your API key and file format."
+        )
         return
 
     output_file = f"{os.path.splitext(file_path)[0]}_transcription.txt"
