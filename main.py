@@ -86,11 +86,14 @@ def transcribe_audio(file_path, api_key):
 
         print("🤖 Formatting text with AI...")
 
-        if not transcript:
+        # Extract text from transcript object
+        transcript_text = transcript.text if hasattr(transcript, 'text') else str(transcript)
+        
+        if not transcript_text:
             print("⚠️ Warning: Transcript is empty. Skipping formatting.")
             return ""
 
-        formatted_transcript = format_transcript_with_ai(transcript, client)
+        formatted_transcript = format_transcript_with_ai(transcript_text, client)
         return formatted_transcript
 
     except FileNotFoundError:
