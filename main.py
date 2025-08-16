@@ -3,14 +3,31 @@ from openai import OpenAI
 import sys
 
 
-def format_transcript_with_ai(text, client):
+def format_transcript_with_ai(transcript, client):
     """
     Use OpenAI to format the transcript with proper punctuation and structure
+    Can handle both plain text strings and TranscriptionVerbose objects
     """
     try:
+        # Handle TranscriptionVerbose object
+        if hasattr(transcript, 'segments') and hasattr(transcript, 'text'):
+            # Build formatted text with timestamps from segments
+            segments_text = ""
+            for segment in transcript.segments:
+                start_time = int(segment.start)
+                minutes = start_time // 60
+                seconds = start_time % 60
+                timestamp = f"[{minutes:02d}:{seconds:02d}]"
+                segments_text += f"{timestamp} {segment.text}\n"
+            
+            text_to_format = segments_text
+        else:
+            # Handle plain text string
+            text_to_format = str(transcript)
+
         prompt = f"""You are an expert in making text data look readable by only changing it's formatting and punctionation without adding any new content. Keep only the human readable part. Please format the following transcribed text with proper punctuation, capitalization, and paragraph breaks. Make it readable and well-structured. Add pargraph headings with starting timestamps. Keep timestamps only for paragraph headings, keep paragraph body clean text. <text>
 
-{text}
+{text_to_format}
 </text>
 Return only the formatted text without any additional commentary."""
         print("🤖 Formatting text with AI...")
@@ -86,14 +103,11 @@ def transcribe_audio(file_path, api_key):
 
         print("🤖 Formatting text with AI...")
 
-        # Extract text from transcript object
-        transcript_text = transcript.text if hasattr(transcript, 'text') else str(transcript)
-        
-        if not transcript_text:
+        if not transcript or (hasattr(transcript, 'text') and not transcript.text):
             print("⚠️ Warning: Transcript is empty. Skipping formatting.")
             return ""
 
-        formatted_transcript = format_transcript_with_ai(transcript_text, client)
+        formatted_transcript = format_transcript_with_ai(transcript, client)
         return formatted_transcript
 
     except FileNotFoundError:
