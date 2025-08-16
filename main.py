@@ -19,7 +19,7 @@ def format_transcript_with_ai(transcript, client):
                 seconds = start_time % 60
                 timestamp = f"[{minutes:02d}:{seconds:02d}]"
                 segments_text += f"{timestamp} {segment.text}\n"
-            
+
             text_to_format = segments_text
         else:
             # Handle plain text string
@@ -32,17 +32,17 @@ def format_transcript_with_ai(transcript, client):
 Return only the formatted text without any additional commentary."""
         print("🤖 Formatting text with AI...")
         response = client.chat.completions.create(
-            model="gpt-5",
+            model="gpt-4o",
             messages=[{
                 "role":
                 "system",
                 "content":
-                "You are a professional text editor. Format transcribed text with proper punctuation, capitalization, paragraph breaks, and paragraph headings."
+                "You are a professional text editor. Format transcribed text with proper punctuation, capitalization, paragraph breaks, and detect paragraph subject to mark every paragraph with proper paragraph headings."
             }, {
                 "role": "user",
                 "content": prompt
             }],
-            temperature=0.1)
+            temperature=1)
 
         return response.choices[0].message.content.strip()
 
@@ -50,7 +50,7 @@ Return only the formatted text without any additional commentary."""
         print(
             f"⚠️ Warning: AI formatting failed ({str(e)}). Using basic formatting instead."
         )
-        return text
+        return ""
 
 
 def format_text_to_json(text, api_key):
@@ -77,6 +77,7 @@ def format_text_to_json(text, api_key):
             temperature=0.2)
 
         formatted_json = response.choices[0].message.content.strip()
+
         return formatted_json
 
     except Exception as e:
@@ -103,7 +104,8 @@ def transcribe_audio(file_path, api_key):
 
         print("🤖 Formatting text with AI...")
 
-        if not transcript or (hasattr(transcript, 'text') and not transcript.text):
+        if not transcript or (hasattr(transcript, 'text')
+                              and not transcript.text):
             print("⚠️ Warning: Transcript is empty. Skipping formatting.")
             return ""
 
