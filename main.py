@@ -1,6 +1,7 @@
 import os
 from openai import OpenAI
 import sys
+import argparse
 
 
 def format_transcript_with_ai(transcript, client):
@@ -87,7 +88,41 @@ def format_text_to_json(text, api_key):
         return None
 
 
-def transcribe_audio(file_path, api_key):
+def format_to_srt(transcript):
+    """
+    Convert transcript segments to SRT format
+    """
+    if not hasattr(transcript, 'segments'):
+        return ""
+    
+    srt_content = ""
+    for i, segment in enumerate(transcript.segments, 1):
+        # Convert seconds to SRT time format (HH:MM:SS,mmm)
+        start_seconds = segment.start
+        end_seconds = segment.end
+        
+        start_time = format_srt_timestamp(start_seconds)
+        end_time = format_srt_timestamp(end_seconds)
+        
+        # SRT format: sequence number, timestamp, text, blank line
+        srt_content += f"{i}\n{start_time} --> {end_time}\n{segment.text.strip()}\n\n"
+    
+    return srt_content
+
+
+def format_srt_timestamp(seconds):
+    """
+    Convert seconds to SRT timestamp format (HH:MM:SS,mmm)
+    """
+    hours = int(seconds // 3600)
+    minutes = int((seconds % 3600) // 60)
+    secs = int(seconds % 60)
+    milliseconds = int((seconds % 1) * 1000)
+    
+    return f"{hours:02d}:{minutes:02d}:{secs:02d},{milliseconds:03d}"
+
+
+def transcribe_audio(file_path, api_key, srt_output=False):
     """
     Transcribe audio file using OpenAI Whisper API
     """
@@ -109,7 +144,22 @@ def transcribe_audio(file_path, api_key):
             print("⚠️ Warning: Transcript is empty. Skipping formatting.")
             return ""
 
+
+
         formatted_transcript = format_transcript_with_ai(transcript, client)
+        
+        # Create SRT file if requested
+        if srt_output:
+            srt_content = format_to_srt(transcript)
+            if srt_content:
+                srt_file = f"{os.path.splitext(file_path)[0]}.srt"
+                try:
+                    with open(srt_file, 'w', encoding='utf-8') as f:
+                        f.write(srt_content)
+                    print(f"✅ SRT file saved to: {srt_file}")
+                except Exception as e:
+                    print(f"❌ Error saving SRT file: {str(e)}")
+        
         return formatted_transcript
 
     except FileNotFoundError:
@@ -121,6 +171,14 @@ def transcribe_audio(file_path, api_key):
 def main():
     print("🎵 OpenAI Whisper Audio Transcription Tool")
     print("=" * 45)
+    
+    # Parse command line arguments
+    parser = argparse.ArgumentParser(description="Transcribe audio files using OpenAI Whisper API")
+    parser.add_argument("file_path", help="Path to the audio file to transcribe")
+    parser.add_argument("--srt", action="store_true", help="Generate SRT subtitle file")
+    
+    args = parser.parse_args()
+    
     api_key = os.getenv('OPENAI_API_KEY')
 
     if not api_key:
@@ -128,14 +186,7 @@ def main():
         print("Please set your OpenAI API key in the Secrets tool.")
         return
 
-    # require a file path CLI argument, trim it, and validate
-    if len(sys.argv) < 2:
-        print("❌ Error: No file path provided.")
-        print("Usage: python main.py <audio_file_path>")
-        print("Example: python main.py audio.mp3")
-        return
-
-    file_path = sys.argv[1].strip()
+    file_path = args.file_path.strip()
     if not file_path:
         print("✖ Error: File path cannot be empty.")
         return
@@ -161,7 +212,7 @@ def main():
     print(f"🔄 Transcribing audio file: {file_path}")
     print("Please wait...")
 
-    result = transcribe_audio(file_path, api_key)
+    result = transcribe_audio(file_path, api_key, args.srt)
 
     print("\n" + "=" * 45)
     print("📝 TRANSCRIPTION RESULT:")

@@ -1,0 +1,8 @@
+# Audio Transcription Utility Requirements
+# Core dependency for OpenAI API integration
+openai>=1.97.1
+
+# Standard library modules used (no additional packages required):
+# - os (built-in)
+# - sys (built-in) 
+# - argparse (built-in)

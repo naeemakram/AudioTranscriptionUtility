@@ -163,5 +163,4 @@ cython_debug/
 *.m4a
 *transcription*.txt
 output.txt
-*.txt
 *json*.txt
