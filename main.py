@@ -31,7 +31,7 @@ def format_transcript_with_ai(transcript, client):
 {text_to_format}
 </text>
 Return only the formatted text without any additional commentary."""
-        print("🤖 Formatting text with AI...")
+        print("Formatting text with AI...")
         response = client.chat.completions.create(
             model="gpt-4o",
             messages=[{
@@ -49,7 +49,7 @@ Return only the formatted text without any additional commentary."""
 
     except Exception as e:
         print(
-            f"⚠️ Warning: AI formatting failed ({str(e)}). Using basic formatting instead."
+            f"Warning: AI formatting failed ({str(e)}). Using basic formatting instead."
         )
         return ""
 
@@ -83,7 +83,7 @@ def format_text_to_json(text, api_key):
 
     except Exception as e:
         print(
-            f"⚠️ Warning: Conversion to JSON failed ({str(e)}). Returning None."
+            f"Warning: Conversion to JSON failed ({str(e)}). Returning None."
         )
         return None
 
@@ -122,6 +122,9 @@ def format_srt_timestamp(seconds):
     return f"{hours:02d}:{minutes:02d}:{secs:02d},{milliseconds:03d}"
 
 
+AUDIO_EXTENSIONS = {".mp3", ".mp4", ".mpeg", ".mpga", ".m4a", ".wav", ".webm"}
+
+
 def transcribe_audio(file_path, api_key, srt_output=False):
     """
     Transcribe audio file using OpenAI Whisper API
@@ -137,11 +140,11 @@ def transcribe_audio(file_path, api_key, srt_output=False):
                 timestamp_granularities=["segment"],
                 language="en")
 
-        print("🤖 Formatting text with AI...")
+        print("Formatting text with AI...")
 
         if not transcript or (hasattr(transcript, 'text')
                               and not transcript.text):
-            print("⚠️ Warning: Transcript is empty. Skipping formatting.")
+            print("Warning: Transcript is empty. Skipping formatting.")
             return ""
 
 
@@ -156,9 +159,9 @@ def transcribe_audio(file_path, api_key, srt_output=False):
                 try:
                     with open(srt_file, 'w', encoding='utf-8') as f:
                         f.write(srt_content)
-                    print(f"✅ SRT file saved to: {srt_file}")
+                    print(f"SRT file saved to: {srt_file}")
                 except Exception as e:
-                    print(f"❌ Error saving SRT file: {str(e)}")
+                    print(f"Error saving SRT file: {str(e)}")
         
         return formatted_transcript
 
@@ -168,32 +171,120 @@ def transcribe_audio(file_path, api_key, srt_output=False):
         return f"Error during transcription: {str(e)}"
 
 
-def main():
-    print("🎵 OpenAI Whisper Audio Transcription Tool")
+def process_audio_file(file_path, api_key, srt_output=False):
+    """
+    Run the full transcribe -> AI-format -> YouTube-JSON pipeline for a single
+    audio file and save the results next to it. Returns True on success.
+    """
+    print(f"Transcribing audio file: {file_path}")
+    print("Please wait...")
+
+    result = transcribe_audio(file_path, api_key, srt_output)
+
+    print("\n" + "=" * 45)
+    print("TRANSCRIPTION RESULT:")
     print("=" * 45)
-    
+    print(result)
+    print("=" * 45)
+
+    if result.startswith("Error: during transcription: Error code:") or result.startswith("Error during transcription:"):
+        print(
+            "Error: Transcription failed. Please check your API key and file format."
+        )
+        return False
+
+    output_file = f"{os.path.splitext(file_path)[0]}_transcription.txt"
+    try:
+        with open(output_file, 'w', encoding='utf-8') as f:
+            f.write(result)
+        print(f"Transcription saved to: {output_file}")
+    except Exception as e:
+        print(f"Error saving file: {str(e)}")
+
+    print("JSON RESULT:")
+    print("=" * 45)
+    json_result = format_text_to_json(result, api_key)
+    print(json_result)
+    print("=" * 45)
+
+    output_file = f"{os.path.splitext(file_path)[0]}_json.txt"
+    try:
+        with open(output_file, 'w', encoding='utf-8') as f:
+            f.write(json_result or "{}")
+        print(f"Transcription saved to: {output_file}")
+    except Exception as e:
+        print(f"Error saving file: {str(e)}")
+
+    return True
+
+
+def process_folder(folder_path, api_key, srt_output=False):
+    """
+    Find audio files directly inside folder_path and process each one in turn,
+    saving results alongside the source files.
+    """
+    audio_files = sorted(
+        entry.path
+        for entry in os.scandir(folder_path)
+        if entry.is_file()
+        and os.path.splitext(entry.name)[1].lower() in AUDIO_EXTENSIONS)
+
+    if not audio_files:
+        print(f"No audio files found in folder: {folder_path}")
+        return
+
+    print(f"Found {len(audio_files)} audio file(s) in: {folder_path}")
+
+    succeeded = 0
+    failed = 0
+    for index, audio_file in enumerate(audio_files, 1):
+        print("\n" + "=" * 45)
+        print(f"[{index}/{len(audio_files)}] Processing: {audio_file}")
+        print("=" * 45)
+        try:
+            if process_audio_file(audio_file, api_key, srt_output):
+                succeeded += 1
+            else:
+                failed += 1
+        except Exception as e:
+            failed += 1
+            print(f"Error: Failed to process '{audio_file}': {str(e)}")
+
+    print("\n" + "=" * 45)
+    print(f"Batch complete: {succeeded} succeeded, {failed} failed.")
+    print("=" * 45)
+
+
+def main():
+    print("OpenAI Whisper Audio Transcription Tool")
+    print("=" * 45)
+
     # Parse command line arguments
     parser = argparse.ArgumentParser(description="Transcribe audio files using OpenAI Whisper API")
-    parser.add_argument("file_path", help="Path to the audio file to transcribe")
-    parser.add_argument("--srt", action="store_true", help="Generate SRT subtitle file")
-    
+    parser.add_argument("file_path", help="Path to an audio file, a .txt transcript, or a folder of audio files")
+    parser.add_argument("--srt", action="store_true", help="Generate SRT subtitle file(s)")
+
     args = parser.parse_args()
-    
+
     api_key = os.getenv('OPENAI_API_KEY')
 
     if not api_key:
-        print("❌ Error: OPENAI_API_KEY environment variable not set.")
+        print("Error: OPENAI_API_KEY environment variable not set.")
         print("Please set your OpenAI API key in the Secrets tool.")
         return
 
     file_path = args.file_path.strip()
     if not file_path:
-        print("✖ Error: File path cannot be empty.")
+        print("Error: File path cannot be empty.")
         return
 
-    # Check if file exists
+    # Check if path exists
     if not os.path.exists(file_path):
-        print(f"❌ Error: File '{file_path}' does not exist.")
+        print(f"Error: Path '{file_path}' does not exist.")
+        return
+
+    if os.path.isdir(file_path):
+        process_folder(file_path, api_key, args.srt)
         return
 
     if file_path.endswith(".txt"):
@@ -204,49 +295,12 @@ def main():
         client = OpenAI(api_key=api_key)
         result = format_transcript_with_ai(transcript, client)
         print("\n" + "=" * 45)
-        print("📝 TRANSCRIPTION RESULT:")
+        print("TRANSCRIPTION RESULT:")
         print("=" * 45)
         print(result)
         return
 
-    print(f"🔄 Transcribing audio file: {file_path}")
-    print("Please wait...")
-
-    result = transcribe_audio(file_path, api_key, args.srt)
-
-    print("\n" + "=" * 45)
-    print("📝 TRANSCRIPTION RESULT:")
-    print("=" * 45)
-    print(result)
-    print("=" * 45)
-
-    if (result.startswith("Error: during transcription: Error code:")):
-        print(
-            "❌ Error: Transcription failed. Please check your API key and file format."
-        )
-        return
-
-    output_file = f"{os.path.splitext(file_path)[0]}_transcription.txt"
-    try:
-        with open(output_file, 'w', encoding='utf-8') as f:
-            f.write(result)
-        print(f"✅ Transcription saved to: {output_file}")
-    except Exception as e:
-        print(f"❌ Error saving file: {str(e)}")
-
-    print("📝 JSON RESULT:")
-    print("=" * 45)
-    json_result = format_text_to_json(result, api_key)
-    print(json_result)
-    print("=" * 45)
-
-    output_file = f"{os.path.splitext(file_path)[0]}_json.txt"
-    try:
-        with open(output_file, 'w', encoding='utf-8') as f:
-            f.write(json_result or "{}")
-        print(f"✅ Transcription saved to: {output_file}")
-    except Exception as e:
-        print(f"❌ Error saving file: {str(e)}")
+    process_audio_file(file_path, api_key, args.srt)
 
 
 if __name__ == "__main__":
