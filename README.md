@@ -17,6 +17,7 @@ For context on cost: transcribing an 18-minute English audio file in `.m4a` form
 - **Accurate transcription** via OpenAI Whisper (`whisper-1`) with per-segment timestamps.
 - **AI-formatted output** — GPT-4o adds punctuation, capitalization, and paragraph breaks, and inserts **timestamped paragraph headings** ideal for auto-generating YouTube chapters and improving video SEO.
 - **YouTube metadata generation** — automatically drafts a title, description, and tags (as JSON) from the transcript.
+- **Markdown lecture-notes mode (`--udemy`)** — for course/lecture audio: formats the transcript as clean Markdown with topic-based chapter headings and no timestamps, and skips the YouTube metadata step entirely.
 - **Optional `.srt` subtitles** — export standards-compliant subtitle files from the same Whisper segments.
 - **Single file, folder batch, or existing transcript** — point it at one recording, a whole folder, or a `.txt` you already have.
 - **Resilient batch processing** — in folder mode, a file that fails is reported at the end without stopping the rest.
@@ -43,12 +44,12 @@ For context on cost: transcribing an 18-minute English audio file in `.m4a` form
    ```
    Leave `transcription_model` as `whisper-1` — it's the only OpenAI transcription model that returns the segment timestamps this tool needs for chapter headings and `--srt` output.
 
-   `config.json` also supports `format_system_prompt`, `format_user_prompt`, `json_system_prompt`, and `json_user_prompt` for customizing the formatting/JSON prompts. Any subset (including none) may be set — missing keys fall back to the built-in defaults. In `format_user_prompt` and `json_user_prompt`, the literal token `{{transcript}}` marks where the transcript is inserted.
+   `config.json` also supports `format_system_prompt`, `format_user_prompt`, `json_system_prompt`, and `json_user_prompt` for customizing the formatting/JSON prompts, plus `udemy_format_system_prompt` and `udemy_format_user_prompt` for the `--udemy` Markdown mode (see Usage below). Any subset (including none) may be set — missing keys fall back to the built-in defaults. In `format_user_prompt`, `udemy_format_user_prompt`, and `json_user_prompt`, the literal token `{{transcript}}` marks where the transcript is inserted.
 
 ## Usage
 
 ```
-python main.py <path> [--srt]
+python main.py <path> [--srt] [--udemy]
 ```
 
 `<path>` can be an audio file, a folder of audio files, or a plain-text transcript. Behavior depends on which one you give it.
@@ -83,7 +84,21 @@ python main.py path/to/folder --srt
 
 Produces an additional `.srt` subtitle file (e.g. `meeting.srt`) alongside the transcript, using the same timestamped segments returned by Whisper. Works for both single files and folder batches.
 
-### 4. Reformat an existing transcript
+### 4. Add `--udemy` for Markdown lecture notes
+
+```
+python main.py lecture.m4a --udemy
+python main.py path/to/folder --udemy
+```
+
+Use this for course/lecture audio instead of YouTube video audio. It changes two things:
+
+- The AI-formatted transcript is written as **Markdown** (`lecture_transcription.md` instead of `.txt`), with `##`/`###` chapter/topic headings based on natural breaks in the content, and **no timestamps** anywhere in the output.
+- The YouTube metadata step is **skipped entirely** — no `*_json.txt` file is produced.
+
+`--udemy` can be combined with `--srt`; the two are independent. It also works on the `.txt`-reformatting path below (changes the printed formatting style, but no file is written there either way).
+
+### 5. Reformat an existing transcript
 
 ```
 python main.py notes.txt
@@ -96,8 +111,8 @@ If you already have a plain-text transcript, pass the `.txt` file directly to sk
 | Stage | Model | Purpose |
 | --- | --- | --- |
 | Transcription | `whisper-1` (`verbose_json`, segment timestamps) | Speech-to-text with per-segment start/end times |
-| Formatting | `format_model` (configurable, see `config.json`) | Punctuation, paragraphs, timestamped headings |
-| YouTube metadata | `json_model` (configurable, see `config.json`) | Title, description, and tags as JSON |
+| Formatting | `format_model` (configurable, see `config.json`) | Punctuation, paragraphs, timestamped headings (or Markdown chapter headings with `--udemy`) |
+| YouTube metadata | `json_model` (configurable, see `config.json`) | Title, description, and tags as JSON — skipped entirely with `--udemy` |
 
 Both the models and their prompts are configurable via `config.json` (see Setup above) — no code change needed. All logic lives in a single `main.py` — no framework, no server, easy to read and adapt.
 

@@ -18,6 +18,20 @@ DEFAULT_CONFIG = {
 {{transcript}}
 </text>
 Return only the formatted text without any additional commentary.""",
+    "udemy_format_system_prompt": "You are an expert technical editor who converts raw lecture transcripts into clean, well-structured Markdown study notes. You never invent, summarize away, or omit content — you only reformat.",
+    "udemy_format_user_prompt": """You are formatting a raw lecture transcript into clean Markdown. The input text is prefixed per line with [MM:SS] timestamps taken from the audio — use those timestamps only to detect where one topic ends and a new one begins. Do not include any timestamps, time codes, or [MM:SS] markers anywhere in your output.
+
+Convert the transcript into well-structured Markdown:
+- Use "##" for major topic/chapter headings and "###" for sub-topics within a chapter, based on natural topic breaks in the lecture.
+- Write clear, descriptive heading titles based on what is actually discussed in that section (do not use timestamps as headings).
+- Keep the body text as clean, readable prose or bullet lists where appropriate, with correct punctuation and capitalization.
+- Do not add any promotional or marketing language, calls to action, hashtags, or tags — this is lecture material, not video marketing copy.
+- Do not invent, add, or embellish any content that is not present in the transcript; only reformat what is there.
+<text>
+
+{{transcript}}
+</text>
+Return only the Markdown-formatted lecture notes, with no additional commentary before or after.""",
     "json_system_prompt": "You are a helpful assistant that formats text into JSON.",
     "json_user_prompt": "You're a gen-z copywriter with great information and experience of writing viral content for the internet youtube etc. Write youtube video title, description, tags  for a video based to the supplied text. Return data in json format. with keys title, description, tags. Keep tags a string with comma separated tags.<text>{{transcript}}</text>",
 }
@@ -43,10 +57,12 @@ def load_config():
 CONFIG = load_config()
 
 
-def format_transcript_with_ai(transcript, client):
+def format_transcript_with_ai(transcript, client, udemy=False):
     """
     Use OpenAI to format the transcript with proper punctuation and structure
-    Can handle both plain text strings and TranscriptionVerbose objects
+    Can handle both plain text strings and TranscriptionVerbose objects.
+    When udemy=True, formats as Markdown lecture notes (no timestamps in
+    output) instead of the default YouTube-style timestamped headings.
     """
     try:
         # Handle TranscriptionVerbose object
@@ -65,13 +81,16 @@ def format_transcript_with_ai(transcript, client):
             # Handle plain text string
             text_to_format = str(transcript)
 
-        prompt = CONFIG["format_user_prompt"].replace("{{transcript}}", text_to_format)
+        system_prompt_key = "udemy_format_system_prompt" if udemy else "format_system_prompt"
+        user_prompt_key = "udemy_format_user_prompt" if udemy else "format_user_prompt"
+
+        prompt = CONFIG[user_prompt_key].replace("{{transcript}}", text_to_format)
         print("Formatting text with AI...")
         response = client.chat.completions.create(
             model=CONFIG["format_model"],
             messages=[{
                 "role": "system",
-                "content": CONFIG["format_system_prompt"]
+                "content": CONFIG[system_prompt_key]
             }, {
                 "role": "user",
                 "content": prompt
@@ -156,7 +175,7 @@ def format_srt_timestamp(seconds):
 AUDIO_EXTENSIONS = {".mp3", ".mp4", ".mpeg", ".mpga", ".m4a", ".wav", ".webm"}
 
 
-def transcribe_audio(file_path, api_key, srt_output=False):
+def transcribe_audio(file_path, api_key, srt_output=False, udemy=False):
     """
     Transcribe audio file using OpenAI Whisper API
     """
@@ -180,7 +199,7 @@ def transcribe_audio(file_path, api_key, srt_output=False):
 
 
 
-        formatted_transcript = format_transcript_with_ai(transcript, client)
+        formatted_transcript = format_transcript_with_ai(transcript, client, udemy=udemy)
         
         # Create SRT file if requested
         if srt_output:
@@ -202,15 +221,17 @@ def transcribe_audio(file_path, api_key, srt_output=False):
         return f"Error during transcription: {str(e)}"
 
 
-def process_audio_file(file_path, api_key, srt_output=False):
+def process_audio_file(file_path, api_key, srt_output=False, udemy=False):
     """
-    Run the full transcribe -> AI-format -> YouTube-JSON pipeline for a single
-    audio file and save the results next to it. Returns True on success.
+    Run the full transcribe -> AI-format [-> YouTube-JSON] pipeline for a
+    single audio file and save the results next to it. Returns True on
+    success. When udemy=True, formats as Markdown and skips the YouTube
+    JSON metadata step entirely.
     """
     print(f"Transcribing audio file: {file_path}")
     print("Please wait...")
 
-    result = transcribe_audio(file_path, api_key, srt_output)
+    result = transcribe_audio(file_path, api_key, srt_output, udemy)
 
     print("\n" + "=" * 45)
     print("TRANSCRIPTION RESULT:")
@@ -224,13 +245,17 @@ def process_audio_file(file_path, api_key, srt_output=False):
         )
         return False
 
-    output_file = f"{os.path.splitext(file_path)[0]}_transcription.txt"
+    output_extension = "_transcription.md" if udemy else "_transcription.txt"
+    output_file = f"{os.path.splitext(file_path)[0]}{output_extension}"
     try:
         with open(output_file, 'w', encoding='utf-8') as f:
             f.write(result)
         print(f"Transcription saved to: {output_file}")
     except Exception as e:
         print(f"Error saving file: {str(e)}")
+
+    if udemy:
+        return True
 
     print("JSON RESULT:")
     print("=" * 45)
@@ -249,7 +274,7 @@ def process_audio_file(file_path, api_key, srt_output=False):
     return True
 
 
-def process_folder(folder_path, api_key, srt_output=False):
+def process_folder(folder_path, api_key, srt_output=False, udemy=False):
     """
     Find audio files directly inside folder_path and process each one in turn,
     saving results alongside the source files.
@@ -273,7 +298,7 @@ def process_folder(folder_path, api_key, srt_output=False):
         print(f"[{index}/{len(audio_files)}] Processing: {audio_file}")
         print("=" * 45)
         try:
-            if process_audio_file(audio_file, api_key, srt_output):
+            if process_audio_file(audio_file, api_key, srt_output, udemy):
                 succeeded += 1
             else:
                 failed += 1
@@ -294,6 +319,7 @@ def main():
     parser = argparse.ArgumentParser(description="Transcribe audio files using OpenAI Whisper API")
     parser.add_argument("file_path", help="Path to an audio file, a .txt transcript, or a folder of audio files")
     parser.add_argument("--srt", action="store_true", help="Generate SRT subtitle file(s)")
+    parser.add_argument("--udemy", action="store_true", help="Format as Markdown lecture notes (no timestamps, headings only) and skip YouTube metadata JSON generation")
 
     args = parser.parse_args()
 
@@ -315,7 +341,7 @@ def main():
         return
 
     if os.path.isdir(file_path):
-        process_folder(file_path, api_key, args.srt)
+        process_folder(file_path, api_key, args.srt, args.udemy)
         return
 
     if file_path.endswith(".txt"):
@@ -324,14 +350,14 @@ def main():
         with open(file_path, 'r', encoding='utf-8') as text_file:
             transcript = text_file.read().strip()
         client = OpenAI(api_key=api_key)
-        result = format_transcript_with_ai(transcript, client)
+        result = format_transcript_with_ai(transcript, client, udemy=args.udemy)
         print("\n" + "=" * 45)
         print("TRANSCRIPTION RESULT:")
         print("=" * 45)
         print(result)
         return
 
-    process_audio_file(file_path, api_key, args.srt)
+    process_audio_file(file_path, api_key, args.srt, args.udemy)
 
 
 if __name__ == "__main__":
