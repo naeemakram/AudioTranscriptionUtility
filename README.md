@@ -37,11 +37,13 @@ For context on cost: transcribing an 18-minute English audio file in `.m4a` form
    $env:OPENAI_API_KEY = "sk-..."   # PowerShell
    export OPENAI_API_KEY=sk-...     # macOS/Linux
    ```
-3. (Optional) Copy `sample_config.json` to `config.json` and edit it to change which OpenAI models are used for formatting and JSON generation:
+3. (Optional) Copy `sample_config.json` to `config.json` and edit it to change which OpenAI models are used, and/or customize the prompts sent to them:
    ```
    cp sample_config.json config.json
    ```
    Leave `transcription_model` as `whisper-1` — it's the only OpenAI transcription model that returns the segment timestamps this tool needs for chapter headings and `--srt` output.
+
+   `config.json` also supports `format_system_prompt`, `format_user_prompt`, `json_system_prompt`, and `json_user_prompt` for customizing the formatting/JSON prompts. Any subset (including none) may be set — missing keys fall back to the built-in defaults. In `format_user_prompt` and `json_user_prompt`, the literal token `{{transcript}}` marks where the transcript is inserted.
 
 ## Usage
 
@@ -94,10 +96,10 @@ If you already have a plain-text transcript, pass the `.txt` file directly to sk
 | Stage | Model | Purpose |
 | --- | --- | --- |
 | Transcription | `whisper-1` (`verbose_json`, segment timestamps) | Speech-to-text with per-segment start/end times |
-| Formatting | `gpt-4o` | Punctuation, paragraphs, timestamped headings |
-| YouTube metadata | `gpt-3.5-turbo` | Title, description, and tags as JSON |
+| Formatting | `format_model` (configurable, see `config.json`) | Punctuation, paragraphs, timestamped headings |
+| YouTube metadata | `json_model` (configurable, see `config.json`) | Title, description, and tags as JSON |
 
-All logic lives in a single `main.py` — no framework, no server, easy to read and adapt.
+Both the models and their prompts are configurable via `config.json` (see Setup above) — no code change needed. All logic lives in a single `main.py` — no framework, no server, easy to read and adapt.
 
 ## Notes
 

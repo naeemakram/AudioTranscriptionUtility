@@ -53,3 +53,9 @@ Model names are not hardcoded — `main.py` loads them from `config.json` (same 
 To change which model is used for formatting or JSON generation, edit `config.json` directly; no code change needed.
 
 `transcription_model` should stay `whisper-1` — it's the only OpenAI transcription model that supports `response_format="verbose_json"` with segment-level timestamps, which the chapter-heading formatting and `--srt` output both depend on. Newer transcription models (e.g. `gpt-4o-transcribe`) drop that capability.
+
+## Prompt configuration
+
+The system/user prompts sent to `format_model` and `json_model` are also config-driven, via the same `CONFIG`/`DEFAULT_CONFIG`/`load_config()` mechanism as the model keys: `format_system_prompt`, `format_user_prompt`, `json_system_prompt`, `json_user_prompt`. Any subset (including none) may be present in `config.json` — missing keys fall back to `DEFAULT_CONFIG`.
+
+`format_user_prompt` and `json_user_prompt` are templates: the literal token `{{transcript}}` marks where the transcript text is substituted in, via `str.replace()` (not `str.format()`/f-strings, so custom prompts containing `{`/`}` don't break substitution). If a custom template omits `{{transcript}}`, the transcript simply won't be included in the request — that's a user error, not something the code guards against.

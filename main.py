@@ -12,6 +12,14 @@ DEFAULT_CONFIG = {
     "transcription_model": "whisper-1",
     "format_model": "gpt-5.6-luna",
     "json_model": "gpt-5.6-luna",
+    "format_system_prompt": "You are a professional text editor. Format transcribed text with proper punctuation, capitalization, paragraph breaks, and detect paragraph subject to mark every paragraph with proper paragraph headings.",
+    "format_user_prompt": """You are an expert in making text data look readable by only changing it's formatting and punctionation without adding any new content. Keep only the human readable part. Please format the following transcribed text with proper punctuation, capitalization, and paragraph breaks. Make it readable and well-structured. Add pargraph headings with starting timestamps. Keep timestamps only for paragraph headings, keep paragraph body clean text. <text>
+
+{{transcript}}
+</text>
+Return only the formatted text without any additional commentary.""",
+    "json_system_prompt": "You are a helpful assistant that formats text into JSON.",
+    "json_user_prompt": "You're a gen-z copywriter with great information and experience of writing viral content for the internet youtube etc. Write youtube video title, description, tags  for a video based to the supplied text. Return data in json format. with keys title, description, tags. Keep tags a string with comma separated tags.<text>{{transcript}}</text>",
 }
 CONFIG_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "config.json")
 
@@ -57,19 +65,13 @@ def format_transcript_with_ai(transcript, client):
             # Handle plain text string
             text_to_format = str(transcript)
 
-        prompt = f"""You are an expert in making text data look readable by only changing it's formatting and punctionation without adding any new content. Keep only the human readable part. Please format the following transcribed text with proper punctuation, capitalization, and paragraph breaks. Make it readable and well-structured. Add pargraph headings with starting timestamps. Keep timestamps only for paragraph headings, keep paragraph body clean text. <text>
-
-{text_to_format}
-</text>
-Return only the formatted text without any additional commentary."""
+        prompt = CONFIG["format_user_prompt"].replace("{{transcript}}", text_to_format)
         print("Formatting text with AI...")
         response = client.chat.completions.create(
             model=CONFIG["format_model"],
             messages=[{
-                "role":
-                "system",
-                "content":
-                "You are a professional text editor. Format transcribed text with proper punctuation, capitalization, paragraph breaks, and detect paragraph subject to mark every paragraph with proper paragraph headings."
+                "role": "system",
+                "content": CONFIG["format_system_prompt"]
             }, {
                 "role": "user",
                 "content": prompt
@@ -92,15 +94,13 @@ def format_text_to_json(text, api_key):
     try:
         client = OpenAI(api_key=api_key)
 
-        prompt = f"You're a gen-z copywriter with great information and experience of writing viral content for the internet youtube etc. Write youtube video title, description, tags  for a video based to the supplied text. Return data in json format. with keys title, description, tags. Keep tags a string with comma separated tags.<text>{text}</text>"
+        prompt = CONFIG["json_user_prompt"].replace("{{transcript}}", text)
 
         response = client.chat.completions.create(
             model=CONFIG["json_model"],
             messages=[{
-                "role":
-                "system",
-                "content":
-                "You are a helpful assistant that formats text into JSON."
+                "role": "system",
+                "content": CONFIG["json_system_prompt"]
             }, {
                 "role": "user",
                 "content": prompt
