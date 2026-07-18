@@ -1,0 +1,5 @@
+{
+  "transcription_model": "whisper-1",
+  "format_model": "gpt-5.6-luna",
+  "json_model": "gpt-5.6-luna"
+}

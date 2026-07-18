@@ -4,9 +4,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this is
 
-A personal CLI utility that transcribes audio files via the OpenAI Whisper API, then uses GPT-4o to reformat the raw transcript into readable, punctuated text with paragraph headings and timestamps (useful for turning YouTube video audio into chaptered, SEO-friendly text). It also generates a YouTube title/description/tags JSON blob from the result via GPT-3.5-turbo.
+A personal CLI utility that transcribes audio files via the OpenAI Whisper API, then uses a configurable OpenAI chat model to reformat the raw transcript into readable, punctuated text with paragraph headings and timestamps (useful for turning YouTube video audio into chaptered, SEO-friendly text). It also generates a YouTube title/description/tags JSON blob from the result, via another configurable model.
 
-The entire application logic lives in `main.py` — there is no package structure, no tests, and no web server. `tts.py` is an unrelated scratch script for OpenAI text-to-speech and is not wired into the CLI.
+The entire application logic lives in `main.py` — there is no package structure, no tests, and no web server. `tts.py` is an unrelated scratch script for OpenAI text-to-speech and is not wired into the CLI. Which OpenAI models are used is controlled by `config.json` — see Model configuration below.
 
 ## Running
 
@@ -16,6 +16,7 @@ Requires `OPENAI_API_KEY` to be set as an environment variable.
 python main.py <path-to-audio-file>          # transcribe + AI-format + generate YouTube metadata JSON
 python main.py <path-to-audio-file> --srt    # also emit a .srt subtitle file alongside the transcript
 python main.py <path-to-text-file.txt>       # skip transcription, just AI-format an existing .txt transcript
+python main.py <path-to-folder>              # batch: process every audio file directly inside the folder
 ```
 
 Dependencies are declared in both `pyproject.toml` (Poetry) and `requirements.txt` (plain pip); only dependency is `openai`. Install with either:
@@ -30,16 +31,25 @@ There is no test suite, linter, or build step configured in this repo.
 
 ## Architecture / control flow
 
-`main()` in `main.py` branches on the input file's extension:
+`main()` in `main.py` branches on the input path:
 
 - **`.txt` input** — reads the file as an already-transcribed plain string and pipes it directly into `format_transcript_with_ai()`, printing the result. No transcription or JSON metadata step happens on this path.
-- **Audio input (anything else)** — runs the full pipeline in `transcribe_audio()`:
-  1. Calls `client.audio.transcriptions.create()` with `model="whisper-1"`, `response_format="verbose_json"`, `timestamp_granularities=["segment"]`, `language="en"` — this returns a `TranscriptionVerbose` object with per-segment start/end timestamps, not just plain text.
-  2. Passes the transcript into `format_transcript_with_ai()`, which special-cases `TranscriptionVerbose` objects: it rebuilds the text as `[MM:SS] segment text` lines before sending to GPT-4o, so the model can anchor paragraph headings to real timestamps. Plain strings (from the `.txt` path) skip this step and go straight into the prompt.
+- **Folder input** — `process_folder()` scans the folder (non-recursive) for files matching `AUDIO_EXTENSIONS`, then calls `process_audio_file()` on each in turn, continuing past individual failures and printing a succeeded/failed summary at the end.
+- **Audio input (anything else)** — `process_audio_file()` runs the full pipeline via `transcribe_audio()`:
+  1. Calls `client.audio.transcriptions.create()` with `model=CONFIG["transcription_model"]`, `response_format="verbose_json"`, `timestamp_granularities=["segment"]`, `language="en"` — this returns a `TranscriptionVerbose` object with per-segment start/end timestamps, not just plain text. This only works with `whisper-1`; see Model configuration below.
+  2. Passes the transcript into `format_transcript_with_ai()`, which special-cases `TranscriptionVerbose` objects: it rebuilds the text as `[MM:SS] segment text` lines before sending to `CONFIG["format_model"]`, so the model can anchor paragraph headings to real timestamps. Plain strings (from the `.txt` path) skip this step and go straight into the prompt.
   3. If `--srt` was passed, independently converts the same segments to `.srt` format via `format_to_srt()` / `format_srt_timestamp()` and writes `<input>.srt`.
   4. Writes the AI-formatted transcript to `<input>_transcription.txt`.
-  5. Feeds the formatted transcript to `format_text_to_json()` (GPT-3.5-turbo) to produce a title/description/tags JSON string for YouTube, and writes it to `<input>_json.txt`.
+  5. Feeds the formatted transcript to `format_text_to_json()` (`CONFIG["json_model"]`) to produce a title/description/tags JSON string for YouTube, and writes it to `<input>_json.txt`.
 
 All three OpenAI-calling functions (`format_transcript_with_ai`, `format_text_to_json`, `transcribe_audio`) catch exceptions internally and return an error string or empty string rather than raising — callers print whatever comes back rather than handling failures explicitly. Keep this pattern if extending them, since `main()` doesn't do its own try/except around these calls.
 
 `format_text_to_json()` asks the model to return JSON as a plain string; it is not parsed or validated before being written to disk, so downstream consumers of `*_json.txt` should not assume it's valid JSON.
+
+## Model configuration
+
+Model names are not hardcoded — `main.py` loads them from `config.json` (same directory as the script) into the module-level `CONFIG` dict via `load_config()`. Keys: `transcription_model`, `format_model`, `json_model`. If `config.json` is missing or has invalid JSON, `load_config()` falls back to `DEFAULT_CONFIG` (printing a warning on invalid JSON) rather than raising — keep that fallback behavior if you touch this code.
+
+To change which model is used for formatting or JSON generation, edit `config.json` directly; no code change needed.
+
+`transcription_model` should stay `whisper-1` — it's the only OpenAI transcription model that supports `response_format="verbose_json"` with segment-level timestamps, which the chapter-heading formatting and `--srt` output both depend on. Newer transcription models (e.g. `gpt-4o-transcribe`) drop that capability.

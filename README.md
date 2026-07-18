@@ -20,6 +20,11 @@ The API keys are hidden away for obvious security reasons.
    $env:OPENAI_API_KEY = "sk-..."   # PowerShell
    export OPENAI_API_KEY=sk-...     # macOS/Linux
    ```
+3. (Optional) Copy `sample_config.json` to `config.json` and edit it to change which OpenAI models are used for formatting and JSON generation:
+   ```
+   cp sample_config.json config.json
+   ```
+   Leave `transcription_model` as `whisper-1` — it's the only OpenAI transcription model that returns the segment timestamps this tool needs for chapter headings and `--srt` output.
 
 ## Usage
 
@@ -37,7 +42,7 @@ python main.py meeting.m4a
 
 Supported audio formats: `.mp3`, `.mp4`, `.mpeg`, `.mpga`, `.m4a`, `.wav`, `.webm`.
 
-This transcribes the audio with Whisper, then uses GPT-4o to clean it up into readable text with punctuation, capitalization, and timestamped paragraph headings. Two files are written next to the source audio:
+This transcribes the audio with Whisper, then uses an OpenAI chat model to clean it up into readable text with punctuation, capitalization, and timestamped paragraph headings (which model is used is configurable — see below). Two files are written next to the source audio:
 
 - `meeting_transcription.txt` — the formatted transcript
 - `meeting_json.txt` — a generated YouTube title/description/tags JSON, based on the transcript

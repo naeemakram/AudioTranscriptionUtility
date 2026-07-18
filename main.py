@@ -1,7 +1,38 @@
 import os
+import json
 from openai import OpenAI
 import sys
 import argparse
+
+
+DEFAULT_CONFIG = {
+    # Must stay whisper-1: it's the only OpenAI transcription model that
+    # returns segment-level timestamps (response_format="verbose_json"),
+    # which the chapter-heading and --srt features both depend on.
+    "transcription_model": "whisper-1",
+    "format_model": "gpt-5.6-luna",
+    "json_model": "gpt-5.6-luna",
+}
+CONFIG_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "config.json")
+
+
+def load_config():
+    """
+    Load model configuration from config.json next to this script,
+    falling back to DEFAULT_CONFIG for any missing keys.
+    """
+    config = DEFAULT_CONFIG.copy()
+    try:
+        with open(CONFIG_PATH, "r", encoding="utf-8") as f:
+            config.update(json.load(f))
+    except FileNotFoundError:
+        pass
+    except json.JSONDecodeError as e:
+        print(f"Warning: config.json is invalid ({str(e)}). Using default models.")
+    return config
+
+
+CONFIG = load_config()
 
 
 def format_transcript_with_ai(transcript, client):
@@ -33,7 +64,7 @@ def format_transcript_with_ai(transcript, client):
 Return only the formatted text without any additional commentary."""
         print("Formatting text with AI...")
         response = client.chat.completions.create(
-            model="gpt-4o",
+            model=CONFIG["format_model"],
             messages=[{
                 "role":
                 "system",
@@ -64,7 +95,7 @@ def format_text_to_json(text, api_key):
         prompt = f"You're a gen-z copywriter with great information and experience of writing viral content for the internet youtube etc. Write youtube video title, description, tags  for a video based to the supplied text. Return data in json format. with keys title, description, tags. Keep tags a string with comma separated tags.<text>{text}</text>"
 
         response = client.chat.completions.create(
-            model="gpt-3.5-turbo",
+            model=CONFIG["json_model"],
             messages=[{
                 "role":
                 "system",
@@ -134,7 +165,7 @@ def transcribe_audio(file_path, api_key, srt_output=False):
 
         with open(file_path, "rb") as audio_file:
             transcript = client.audio.transcriptions.create(
-                model="whisper-1",
+                model=CONFIG["transcription_model"],
                 file=audio_file,
                 response_format="verbose_json",
                 timestamp_granularities=["segment"],
