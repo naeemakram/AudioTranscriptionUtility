@@ -66,3 +66,9 @@ The system/user prompts sent to `format_model` and `json_model` are also config-
 `format_user_prompt`, `udemy_format_user_prompt`, and `json_user_prompt` are templates: the literal token `{{transcript}}` marks where the transcript text is substituted in, via `str.replace()` (not `str.format()`/f-strings, so custom prompts containing `{`/`}` don't break substitution). If a custom template omits `{{transcript}}`, the transcript simply won't be included in the request — that's a user error, not something the code guards against.
 
 Note that the segment-derived input text built in `format_transcript_with_ai()` (the `[MM:SS] segment text` lines) is the same regardless of `udemy`, so it still carries timestamp prefixes even in `--udemy` mode. It's `udemy_format_user_prompt`'s job — not the code's — to instruct the model to use those timestamps only to detect topic breaks and exclude them from its Markdown output.
+
+## Usage / cost tracking
+
+Every successful OpenAI call (transcription, format, JSON) appends a record to the module-level `USAGE_RECORDS` list — token counts for chat calls, audio duration for transcription. At the end of `main()`, `report_usage_summary()` aggregates `USAGE_RECORDS` by model, estimates a dollar cost via `CONFIG["pricing"]`, prints the summary, and appends the same block (timestamped) to `usage_log.txt` next to the script — a running historical log across runs, gitignored like `config.json`.
+
+`pricing` is config-driven the same way as models/prompts: a dict keyed by model name, with `input_per_1m_tokens`/`output_per_1m_tokens` for chat models (`format_model`, `json_model`) or `per_minute` for the transcription model. A model that's absent from `pricing`, or present with all-zero rates (the shipped placeholder for custom model names like `gpt-5.6-luna`), is reported as "price unknown" rather than `$0.00` — fill in real rates in `config.json` to get an actual dollar estimate for that model.

@@ -26,6 +26,9 @@ env/
 output.txt
 *.srt
 
+# Local OpenAI usage/cost log
+usage_log.txt
+
 # OS / editor cruft
 .DS_Store
 .idea/
